@@ -30,7 +30,7 @@ class ConnectionPoolTest {
 
     @Test
     fun should_use_builder_to_create_a_flow() = runTest {
-        val pool = ConnectionPool(scope = this) { key: String ->
+        val pool = ConnectionPool(scope = backgroundScope) { key: String ->
             flowOf("1$key", "2$key", "3$key")
                 .onEach { delay(1000) }
         }
@@ -43,54 +43,50 @@ class ConnectionPoolTest {
             2000L to "2ABC",
             3000L to "3ABC",
         )
-
-        coroutineContext.cancelChildren()
     }
 
     @Test
     fun should_reuse_the_same_flow_for_the_same_key() = runTest {
         var createdFlows = 0
-        val pool = ConnectionPool(scope = this) { _: String ->
+        val pool = ConnectionPool(scope = backgroundScope) { _: String ->
             createdFlows++
             infiniteEverySecondProducerFlow
         }
 
-        pool.getConnection("A").launchIn(this)
-        pool.getConnection("A").launchIn(this)
-        pool.getConnection("B").launchIn(this)
-        pool.getConnection("A").launchIn(this)
-        pool.getConnection("B").launchIn(this)
-        pool.getConnection("C").launchIn(this)
+        pool.getConnection("A").launchIn(backgroundScope)
+        pool.getConnection("A").launchIn(backgroundScope)
+        pool.getConnection("B").launchIn(backgroundScope)
+        pool.getConnection("A").launchIn(backgroundScope)
+        pool.getConnection("B").launchIn(backgroundScope)
+        pool.getConnection("C").launchIn(backgroundScope)
 
         delay(4000)
 
         assertEquals(3, createdFlows)
-
-        coroutineContext.cancelChildren()
     }
 
     @Test
     fun should_close_connection_when_there_are_no_active_listeners() = runTest {
         var openConnections = 0
-        val pool = ConnectionPool(scope = this) { _: String ->
+        val pool = ConnectionPool(scope = backgroundScope) { _: String ->
             infiniteEverySecondProducerFlow
                 .onStart { openConnections++ }
                 .onCompletion { openConnections-- }
         }
 
-        val listenerA1 = pool.getConnection("A").launchIn(this)
-        val listenerA2 = pool.getConnection("A").launchIn(this)
-        val listenerB1 = pool.getConnection("B").launchIn(this)
-        val listenerB2 = pool.getConnection("B").launchIn(this)
-        val listenerC1 = pool.getConnection("C").launchIn(this)
+        val listenerA1 = pool.getConnection("A").launchIn(backgroundScope)
+        val listenerA2 = pool.getConnection("A").launchIn(backgroundScope)
+        val listenerB1 = pool.getConnection("B").launchIn(backgroundScope)
+        val listenerB2 = pool.getConnection("B").launchIn(backgroundScope)
+        val listenerC1 = pool.getConnection("C").launchIn(backgroundScope)
 
         delay(3000)
 
         assertEquals(3, openConnections)
 
         listenerB2.cancel()
-        listenerC1.cancel() // The last cancelled here
-        delay(1) // TODO: Close after some time?
+        listenerC1.cancel()
+        delay(1)
 
         assertEquals(2, openConnections)
 
@@ -104,40 +100,36 @@ class ConnectionPoolTest {
         delay(1)
 
         assertEquals(0, openConnections)
-
-        coroutineContext.cancelChildren()
     }
 
     @Test
     fun should_reply_last_value() = runTest {
         val pool = ConnectionPool(
-            scope = this,
+            scope = backgroundScope,
             replayExpiration = 1000.milliseconds,
             replay = 1
         ) { _: String ->
             infiniteEverySecondProducerFlow
         }
 
-        pool.getConnection("A").launchIn(this)
+        pool.getConnection("A").launchIn(backgroundScope)
 
         delay(10500)
 
         var valueProduced: Int? = null
         pool.getConnection("A")
             .onEach { valueProduced = it }
-            .launchIn(this)
+            .launchIn(backgroundScope)
 
         delay(1)
         assertEquals(9, valueProduced)
-
-        coroutineContext.cancelChildren()
     }
 
     @Test
     fun should_keep_reply_for_specified_time() = runTest {
         val replayExpirationMillis = 5000.milliseconds
         val pool = ConnectionPool(
-            scope = this,
+            scope = backgroundScope,
             replayExpiration = replayExpirationMillis,
             replay = 1
         ) { _: String ->
@@ -156,19 +148,17 @@ class ConnectionPoolTest {
         var valueProduced: Int? = null
         pool.getConnection("A")
             .onEach { valueProduced = it }
-            .launchIn(this)
+            .launchIn(backgroundScope)
 
         delay(1)
         assertEquals(9, valueProduced)
-
-        coroutineContext.cancelChildren()
     }
 
     @Test
     fun should_not_keep_reply_for_longer_than_specified_time() = runTest {
         val replayExpiration = 5000.milliseconds
         val pool = ConnectionPool(
-            scope = this,
+            scope = backgroundScope,
             replayExpiration = replayExpiration,
         ) { _: String ->
             infiniteEverySecondProducerFlow
@@ -186,12 +176,10 @@ class ConnectionPoolTest {
         var valueProduced: Int? = null
         pool.getConnection("A")
             .onEach { valueProduced = it }
-            .launchIn(this)
+            .launchIn(backgroundScope)
 
         delay(1)
         assertNull(valueProduced)
-
-        coroutineContext.cancelChildren()
     }
 }
 
