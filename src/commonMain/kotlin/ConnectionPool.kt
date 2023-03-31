@@ -1,4 +1,3 @@
-@file:OptIn(InternalCoroutinesApi::class)
 
 package recipes
 
@@ -11,6 +10,7 @@ import kotlinx.coroutines.internal.SynchronizedObject
 import kotlinx.coroutines.internal.synchronized
 import kotlin.time.Duration
 
+@OptIn(InternalCoroutinesApi::class)
 class ConnectionPool<K, V>(
     private val scope: CoroutineScope,
     private val replay: Int = 0,

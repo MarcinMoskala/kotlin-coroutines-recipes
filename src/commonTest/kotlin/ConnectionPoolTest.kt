@@ -1,5 +1,4 @@
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.asFlow
@@ -181,12 +180,12 @@ class ConnectionPoolTest {
         delay(1)
         assertNull(valueProduced)
     }
-}
 
-@OptIn(ExperimentalCoroutinesApi::class)
-suspend fun <T> TestScope.assertFirstFlowElements(flow: Flow<T>, vararg elements: Pair<Long, T>) {
-    assertEquals(
-        elements.toList(),
-        flow.map { Pair(currentTime, it) }.take(elements.size).toList()
-    )
+    @OptIn(ExperimentalCoroutinesApi::class)
+    suspend fun <T> TestScope.assertFirstFlowElements(flow: Flow<T>, vararg elements: Pair<Long, T>) {
+        assertEquals(
+            elements.toList(),
+            flow.map { Pair(currentTime, it) }.take(elements.size).toList()
+        )
+    }
 }
