@@ -26,7 +26,7 @@ class RetryBackoffFlowTest {
     }
     
     @Test
-    fun `should retry single failing call`() = runTest {
+    fun should_retry_single_failing_call() = runTest {
         val error = object : Throwable() {}
         var first = true
         flow {
@@ -50,7 +50,7 @@ class RetryBackoffFlowTest {
     }
     
     @Test
-    fun `should retry multiple times with growing backoff`() = runTest {
+    fun should_retry_multiple_times_with_growing_backoff() = runTest {
         failingNTimesFlow(10).testBackoffRetry(
             testScope = this,
             minDelay = 1.seconds,
@@ -74,7 +74,7 @@ class RetryBackoffFlowTest {
     }
     
     @Test
-    fun `should calculate only following calls for max attempts`() = runTest {
+    fun should_calculate_only_following_calls_for_max_attempts() = runTest {
         var attempt = 0
         flow {
             while (true) {
@@ -106,7 +106,7 @@ class RetryBackoffFlowTest {
     }
     
     @Test
-    fun `should calculate all calls for non-transient`() = runTest {
+    fun should_calculate_all_calls_for_non_transient() = runTest {
         var attempt = 0
         flow {
             while (true) {
@@ -138,7 +138,7 @@ class RetryBackoffFlowTest {
     }
     
     @Test
-    fun `should use backoff factor`() = runTest {
+    fun should_use_backoff_factor() = runTest {
         failingNTimesFlow(10).testBackoffRetry(
             testScope = this,
             minDelay = 1.seconds,
@@ -160,7 +160,7 @@ class RetryBackoffFlowTest {
     }
     
     @Test
-    fun `should stop backoff growing once max reached`() = runTest {
+    fun should_stop_backoff_growing_once_max_reached() = runTest {
         failingNTimesFlow(10).testBackoffRetry(
             testScope = this,
             minDelay = 1.seconds,
@@ -186,7 +186,7 @@ class RetryBackoffFlowTest {
     }
     
     @Test
-    fun `should retry until max attempts reached`() = runTest {
+    fun should_retry_until_max_attempts_reached() = runTest {
         failingNTimesFlow(10).testBackoffRetry(
             testScope = this,
             minDelay = 2.seconds,
@@ -207,7 +207,7 @@ class RetryBackoffFlowTest {
     }
     
     @Test
-    fun `should add random jitter`() = runTest {
+    fun should_add_random_jitter() = runTest {
         failingNTimesFlow(10).testBackoffRetry(
             testScope = this,
             minDelay = 1.seconds,
