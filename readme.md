@@ -11,14 +11,9 @@ This repository contains Kotlin Coroutines functions that are useful in everyday
 Add the dependency in your module `build.gradle(.kts)`:
 
 ```
-// build.gradle
+// build.gradle / build.gradle.kts
 dependencies {
-    implementation 'com.github.MarcinMoskala:kotlin-coroutines-recipes:<version>'
-}
-
-// build.gradle.kts
-dependencies {
-    implementation("com.github.MarcinMoskala:kotlin-coroutines-recipes:<version>")
+    implementation("com.github.MarcinMoskala.kotlin-coroutines-recipes:kotlin-coroutines-recipes:<version>")
 }
 ```
 
