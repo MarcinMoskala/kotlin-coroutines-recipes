@@ -2,6 +2,8 @@ package recipes
 
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
+import kotlin.math.max
+import kotlin.math.min
 import kotlin.math.pow
 import kotlin.random.Random
 import kotlin.time.Duration
@@ -61,7 +63,7 @@ internal suspend fun <T> retryBackoff(
     require(maxAttempts > 0)
     require(backoffFactor > 1.0)
     require(minDelay in Duration.ZERO..maxDelay)
-
+    
     return retryWhen(
         predicate = { cause, currentAttempts ->
             if (currentAttempts == maxAttempts) {
@@ -69,7 +71,8 @@ internal suspend fun <T> retryBackoff(
                 return@retryWhen false
             }
             
-            val effectiveDelay = calculateBackoffDelay(minDelay, maxDelay, currentAttempts, jitterFactor, random,
+            val effectiveDelay = calculateBackoffDelay(
+                minDelay, maxDelay, currentAttempts, jitterFactor, random,
                 backoffFactor
             )
             beforeRetry(cause, currentAttempts)
@@ -88,14 +91,21 @@ private fun calculateBackoffDelay(
     random: Random,
     backoffFactor: Double,
 ): Double {
-    val baseDelay = (minDelay.inWholeMilliseconds.toDouble() * backoffFactor.pow(currentAttempts))
-        .coerceAtMost(maxDelay.inWholeMilliseconds.toDouble())
+    val minDelayMillis = minDelay.inWholeMilliseconds.toDouble()
+    val maxDelayMillis = maxDelay.inWholeMilliseconds.toDouble()
+    val baseDelay = (minDelayMillis * backoffFactor.pow(currentAttempts))
+        .coerceAtMost(maxDelayMillis)
     
     return if (jitterFactor == 0.0) {
         baseDelay
     } else {
         val jitterOffset = baseDelay * jitterFactor
-        val jitter = random.nextDouble(-jitterOffset, jitterOffset)
-        baseDelay + jitter
+        val minJitter = max(minDelayMillis, baseDelay - jitterOffset)
+        val maxJitter = min(maxDelayMillis, baseDelay + jitterOffset)
+        if (minJitter == maxJitter) {
+            minJitter
+        } else {
+            random.nextDouble(minJitter, maxJitter)
+        }
     }
 }

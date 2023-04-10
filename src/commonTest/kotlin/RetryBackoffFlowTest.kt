@@ -1,3 +1,4 @@
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.currentTime
@@ -9,10 +10,13 @@ import kotlin.random.Random
 import kotlin.test.Test
 
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 import kotlin.time.Duration
+import kotlin.time.Duration.Companion.milliseconds
 
 import kotlin.time.Duration.Companion.seconds
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class RetryBackoffFlowTest {
     
     private fun failingNTimesFlow(failingTimes: Int) : Flow<String> {
@@ -186,6 +190,29 @@ class RetryBackoffFlowTest {
     }
     
     @Test
+    fun should_never_have_delay_smaller_than_min_and_bigger_than_max() = runTest {
+        var delayTimes = listOf<Long>()
+        failingNTimesFlow(100).retryBackoff(
+            minDelay = 2.seconds + 750.milliseconds,
+            maxDelay = 4.seconds + 500.milliseconds,
+            maxAttempts = 100,
+            jitterFactor = 1.0,
+            beforeRetry = { _, _, attempt ->
+                if (attempt != 0) { // The first time millis is not a delay
+                    val delay = this.currentTime - delayTimes.sum()
+                    delayTimes += delay
+                }
+            }
+        ).catch { /* no-op */ }
+            .collect()
+        
+        assertEquals(99, delayTimes.size)
+        assertTrue("All delay times should be between 2750 and 4500 ms, those outside the limit are ${delayTimes.filter { it !in 2750..4500 }}") {
+            delayTimes.all { it in 2750..4500 }
+        }
+    }
+    
+    @Test
     fun should_retry_until_max_attempts_reached() = runTest {
         failingNTimesFlow(10).testBackoffRetry(
             testScope = this,
@@ -219,15 +246,15 @@ class RetryBackoffFlowTest {
             expectRetriesExhaustedCalls = listOf(),
             expectBeforeRetryCalls = listOf(
                 BeforeRetryCall(TestException("Error1"), 0, 0, 0),
-                BeforeRetryCall(TestException("Error2"), 1, 1, 1270),
-                BeforeRetryCall(TestException("Error3"), 2, 2, 3941),
-                BeforeRetryCall(TestException("Error4"), 3, 3, 8560),
-                BeforeRetryCall(TestException("Error5"), 4, 4, 15151),
-                BeforeRetryCall(TestException("Error6"), 5, 5, 20908),
-                BeforeRetryCall(TestException("Error7"), 6, 6, 25383),
-                BeforeRetryCall(TestException("Error8"), 7, 7, 31701),
-                BeforeRetryCall(TestException("Error9"), 8, 8, 36902),
-                BeforeRetryCall(TestException("Error10"), 9, 9, 43791),
+                BeforeRetryCall(TestException("Error2"), 1, 1, 1385),
+                BeforeRetryCall(TestException("Error3"), 2, 2, 4056),
+                BeforeRetryCall(TestException("Error4"), 3, 3, 8020),
+                BeforeRetryCall(TestException("Error5"), 4, 4, 12565),
+                BeforeRetryCall(TestException("Error6"), 5, 5, 16693),
+                BeforeRetryCall(TestException("Error7"), 6, 6, 20180),
+                BeforeRetryCall(TestException("Error8"), 7, 7, 24589),
+                BeforeRetryCall(TestException("Error9"), 8, 8, 28439),
+                BeforeRetryCall(TestException("Error10"), 9, 9, 33133),
             )
         )
     }
