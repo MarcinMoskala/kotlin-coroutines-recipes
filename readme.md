@@ -65,6 +65,46 @@ suspend fun checkConnection(): Boolean = retryWhen(
 
 See [implementation](https://github.com/MarcinMoskala/kotlin-coroutines-recipes/blob/master/src/commonMain/kotlin/retryWhen.kt).
 
+### `retryBackoff`
+
+Function `retryBackoff` implements exponential backoff algorithm for retrying an operation. It is useful when you want to retry an operation multiple times with increasing delay between retries.
+
+```kotlin
+fun observeUserUpdates(): Flow<User> = api
+    .observeUserUpdates()
+    .retryBackoff(
+        minDelay = 1.seconds,
+        maxDelay = 1.minutes, // optional
+        maxAttempts = 30, // optional
+        backoffFactor = 2.0, // optional
+        jitterFactor = 0.1, // optional
+        beforeRetry = { cause, _, _ -> // optional
+            println("Retrying after $cause")
+        },
+        retriesExhausted = { cause -> // optional
+            println("Retries exhausted after $cause")
+        },
+    )
+
+suspend fun fetchUser(): User = retryBackoff(
+    minDelay = 1.seconds,
+    maxDelay = 10.seconds, // optional
+    maxAttempts = 10, // optional
+    backoffFactor = 1.5, // optional
+    jitterFactor = 0.5, // optional
+    beforeRetry = { cause, _, -> // optional
+        println("Retrying after $cause")
+    },
+    retriesExhausted = { cause -> // optional
+        println("Retries exhausted after $cause")
+    },
+) {
+    api.fetchUser()
+}
+```
+
+See [implementation](https://github.com/MarcinMoskala/kotlin-coroutines-recipes/blob/master/src/commonMain/kotlin/RetryBackoff.kt).
+
 ### `raceOf`
 
 Function `raceOf` allows you to run multiple suspending functions in parallel and return the result of the first one that finishes. 

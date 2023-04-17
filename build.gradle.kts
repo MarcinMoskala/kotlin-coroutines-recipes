@@ -44,12 +44,12 @@ kotlin {
     sourceSets {
         val commonMain by getting {
             dependencies {
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.0-Beta")
+                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4")
             }
         }
         val commonTest by getting {
             dependencies {
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.0-Beta")
+                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.6.4")
                 implementation(kotlin("test"))
             }
         }

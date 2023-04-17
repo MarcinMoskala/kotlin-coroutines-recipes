@@ -16,6 +16,7 @@ fun <T> Flow<T>.retryBackoff(
     transient: Boolean = true,
     jitterFactor: Double = 0.1,
     random: Random = Random,
+    successAfterRetry: suspend (attempts: Int) -> Unit = {},
     beforeRetry: suspend (cause: Throwable, currentAttempts: Int, totalAttempts: Int) -> Unit = { _, _, _ -> },
     retriesExhausted: suspend (cause: Throwable) -> Unit = {},
 ): Flow<T> {
@@ -26,8 +27,10 @@ fun <T> Flow<T>.retryBackoff(
     
     return flow {
         var attemptsInRow = 0
+        var isRetrying = false
         this@retryBackoff
             .retryWhen { cause, totalAttempts ->
+                isRetrying = true
                 val currentAttempts = if (transient) attemptsInRow else totalAttempts.toInt()
                 if (currentAttempts == maxAttempts) {
                     retriesExhausted(cause)
@@ -42,7 +45,13 @@ fun <T> Flow<T>.retryBackoff(
                 attemptsInRow++
                 true
             }
-            .onEach { if (transient) attemptsInRow = 0 }
+            .onEach {
+                if (isRetrying) {
+                    successAfterRetry(attemptsInRow)
+                    isRetrying = false
+                }
+                if (transient) attemptsInRow = 0
+            }
             .collect(this)
     }
 }

@@ -18,8 +18,8 @@ import kotlin.time.Duration.Companion.seconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class RetryBackoffFlowTest {
-    
-    private fun failingNTimesFlow(failingTimes: Int) : Flow<String> {
+
+    private fun failingNTimesFlow(failingTimes: Int): Flow<String> {
         var attempt = 0
         return flow {
             when (attempt++) {
@@ -28,7 +28,7 @@ class RetryBackoffFlowTest {
             }
         }
     }
-    
+
     @Test
     fun should_retry_single_failing_call() = runTest {
         val error = object : Throwable() {}
@@ -45,14 +45,18 @@ class RetryBackoffFlowTest {
             minDelay = 1.seconds,
             maxDelay = 5.seconds,
             maxAttempts = 11,
+            jitterFactor = 0.0,
             expectResult = Result.success(listOf("ABC")),
+            expectSuccessAfterRetry = listOf(
+                SuccessAfterRetryCall(attempts=1, time=1000)
+            ),
             expectRetriesExhaustedCalls = listOf(),
             expectBeforeRetryCalls = listOf(
                 BeforeRetryCall(error, 0, 0, 0),
             )
         )
     }
-    
+
     @Test
     fun should_retry_multiple_times_with_growing_backoff() = runTest {
         failingNTimesFlow(10).testBackoffRetry(
@@ -62,6 +66,7 @@ class RetryBackoffFlowTest {
             jitterFactor = 0.0,
             expectResult = Result.success(listOf("ABC")),
             expectRetriesExhaustedCalls = listOf(), // Should not call retriesExhausted when maxAttempts is not reached
+            expectSuccessAfterRetry = listOf(SuccessAfterRetryCall(attempts=10, time=512000 + 256000 + 128000 + 64000 + 32000 + 16000 + 8000 + 4000 + 2000 + 1000)),
             expectBeforeRetryCalls = listOf(
                 BeforeRetryCall(TestException("Error1"), 0, 0, 0),
                 BeforeRetryCall(TestException("Error2"), 1, 1, 1000),
@@ -70,13 +75,23 @@ class RetryBackoffFlowTest {
                 BeforeRetryCall(TestException("Error5"), 4, 4, 8000 + 4000 + 2000 + 1000),
                 BeforeRetryCall(TestException("Error6"), 5, 5, 16000 + 8000 + 4000 + 2000 + 1000),
                 BeforeRetryCall(TestException("Error7"), 6, 6, 32000 + 16000 + 8000 + 4000 + 2000 + 1000),
-                BeforeRetryCall(TestException("Error8"), 7, 7,  64000 + 32000 + 16000 + 8000 + 4000 + 2000 + 1000),
-                BeforeRetryCall(TestException("Error9"), 8, 8, 128000 + 64000 + 32000 + 16000 + 8000 + 4000 + 2000 + 1000),
-                BeforeRetryCall(TestException("Error10"), 9, 9, 256000 + 128000 + 64000 + 32000 + 16000 + 8000 + 4000 + 2000 + 1000),
+                BeforeRetryCall(TestException("Error8"), 7, 7, 64000 + 32000 + 16000 + 8000 + 4000 + 2000 + 1000),
+                BeforeRetryCall(
+                    TestException("Error9"),
+                    8,
+                    8,
+                    128000 + 64000 + 32000 + 16000 + 8000 + 4000 + 2000 + 1000
+                ),
+                BeforeRetryCall(
+                    TestException("Error10"),
+                    9,
+                    9,
+                    256000 + 128000 + 64000 + 32000 + 16000 + 8000 + 4000 + 2000 + 1000
+                ),
             )
         )
     }
-    
+
     @Test
     fun should_calculate_only_following_calls_for_max_attempts() = runTest {
         var attempt = 0
@@ -95,6 +110,14 @@ class RetryBackoffFlowTest {
             jitterFactor = 0.0,
             expectResult = Result.success(listOf("Result4", "Result8", "Result12")),
             expectRetriesExhaustedCalls = listOf(),
+            expectSuccessAfterRetry = listOf(
+                SuccessAfterRetryCall(attempts = 3, time = 4000 + 2000 + 1000),
+                SuccessAfterRetryCall(attempts = 3, time = 4000 + 2000 + 1000 + 4000 + 2000 + 1000),
+                SuccessAfterRetryCall(
+                    attempts = 3,
+                    time = 4000 + 2000 + 1000 + 4000 + 2000 + 1000 + 4000 + 2000 + 1000
+                ),
+            ),
             expectBeforeRetryCalls = listOf(
                 BeforeRetryCall(TestException("Call1"), 0, 0, 0),
                 BeforeRetryCall(TestException("Call2"), 1, 1, 1000),
@@ -108,7 +131,7 @@ class RetryBackoffFlowTest {
             )
         )
     }
-    
+
     @Test
     fun should_calculate_all_calls_for_non_transient() = runTest {
         var attempt = 0
@@ -127,6 +150,11 @@ class RetryBackoffFlowTest {
             jitterFactor = 0.0,
             expectResult = Result.success(listOf("Result4", "Result8", "Result12")),
             expectRetriesExhaustedCalls = listOf(),
+            expectSuccessAfterRetry = listOf(
+                SuccessAfterRetryCall(attempts = 3, time = 4000 + 2000 + 1000),
+                SuccessAfterRetryCall(attempts = 6, time = 32000 + 16000 + 8000 + 4000 + 2000 + 1000),
+                SuccessAfterRetryCall(attempts = 9, time = 256000 + 128000 + 64000 + 32000 + 16000 + 8000 + 4000 + 2000 + 1000)
+            ),
             expectBeforeRetryCalls = listOf(
                 BeforeRetryCall(TestException("Call1"), 0, 0, 0),
                 BeforeRetryCall(TestException("Call2"), 1, 1, 1000),
@@ -136,11 +164,11 @@ class RetryBackoffFlowTest {
                 BeforeRetryCall(TestException("Call7"), 5, 5, 16000 + 8000 + 4000 + 2000 + 1000),
                 BeforeRetryCall(TestException("Call9"), 6, 6, 32000 + 16000 + 8000 + 4000 + 2000 + 1000),
                 BeforeRetryCall(TestException("Call10"), 7, 7, 64000 + 32000 + 16000 + 8000 + 4000 + 2000 + 1000),
-                BeforeRetryCall(TestException("Call11"), 8, 8,128000 + 64000 + 32000 + 16000 + 8000 + 4000 + 2000 + 1000),
+                BeforeRetryCall(TestException("Call11"), 8, 8, 128000 + 64000 + 32000 + 16000 + 8000 + 4000 + 2000 + 1000),
             )
         )
     }
-    
+
     @Test
     fun should_use_backoff_factor() = runTest {
         failingNTimesFlow(10).testBackoffRetry(
@@ -153,6 +181,7 @@ class RetryBackoffFlowTest {
             expectRetriesExhaustedCalls = listOf(
                 RetryExhaustedCall(TestException("Error6"), 121000)
             ),
+            expectSuccessAfterRetry = listOf(),
             expectBeforeRetryCalls = listOf(
                 BeforeRetryCall(TestException("Error1"), 0, 0, 0),
                 BeforeRetryCall(TestException("Error2"), 1, 1, 1000),
@@ -162,7 +191,7 @@ class RetryBackoffFlowTest {
             )
         )
     }
-    
+
     @Test
     fun should_stop_backoff_growing_once_max_reached() = runTest {
         failingNTimesFlow(10).testBackoffRetry(
@@ -173,6 +202,9 @@ class RetryBackoffFlowTest {
             jitterFactor = 0.0,
             expectResult = Result.success(listOf("ABC")),
             expectRetriesExhaustedCalls = listOf(), // Should not call retriesExhausted when maxAttempts is not reached
+            expectSuccessAfterRetry = listOf(
+                SuccessAfterRetryCall(10, 7 * 5000 + 4000 + 2000 + 1000)
+            ),
             expectBeforeRetryCalls = listOf(
                 BeforeRetryCall(TestException("Error1"), 0, 0, 0),
                 BeforeRetryCall(TestException("Error2"), 1, 1, 1000),
@@ -188,7 +220,7 @@ class RetryBackoffFlowTest {
             )
         )
     }
-    
+
     @Test
     fun should_never_have_delay_smaller_than_min_and_bigger_than_max() = runTest {
         var delayTimes = listOf<Long>()
@@ -205,13 +237,13 @@ class RetryBackoffFlowTest {
             }
         ).catch { /* no-op */ }
             .collect()
-        
+
         assertEquals(99, delayTimes.size)
         assertTrue("All delay times should be between 2750 and 4500 ms, those outside the limit are ${delayTimes.filter { it !in 2750..4500 }}") {
             delayTimes.all { it in 2750..4500 }
         }
     }
-    
+
     @Test
     fun should_retry_until_max_attempts_reached() = runTest {
         failingNTimesFlow(10).testBackoffRetry(
@@ -221,6 +253,7 @@ class RetryBackoffFlowTest {
             maxAttempts = 4,
             jitterFactor = 0.0,
             expectResult = Result.failure(TestException("Error5")),
+            expectSuccessAfterRetry = listOf(),
             expectRetriesExhaustedCalls = listOf(
                 RetryExhaustedCall(TestException("Error5"), 24000),
             ),
@@ -232,7 +265,7 @@ class RetryBackoffFlowTest {
             )
         )
     }
-    
+
     @Test
     fun should_add_random_jitter() = runTest {
         failingNTimesFlow(10).testBackoffRetry(
@@ -244,6 +277,7 @@ class RetryBackoffFlowTest {
             random = Random(12345),
             expectResult = Result.success(listOf("ABC")),
             expectRetriesExhaustedCalls = listOf(),
+            expectSuccessAfterRetry = listOf(SuccessAfterRetryCall(attempts=10, time=36192)),
             expectBeforeRetryCalls = listOf(
                 BeforeRetryCall(TestException("Error1"), 0, 0, 0),
                 BeforeRetryCall(TestException("Error2"), 1, 1, 1385),
@@ -258,7 +292,7 @@ class RetryBackoffFlowTest {
             )
         )
     }
-    
+
     suspend fun <T> Flow<T>.testBackoffRetry(
         testScope: TestScope,
         minDelay: Duration,
@@ -269,12 +303,14 @@ class RetryBackoffFlowTest {
         jitterFactor: Double = 0.1,
         random: Random = Random,
         expectResult: Result<List<T>>,
+        expectSuccessAfterRetry: List<SuccessAfterRetryCall>,
         expectRetriesExhaustedCalls: List<RetryExhaustedCall>,
         expectBeforeRetryCalls: List<BeforeRetryCall>,
         elementsToExpect: Int = 1,
     ) {
         var beforeRetryCalls = listOf<BeforeRetryCall>()
         var retriesExhaustedCalls = listOf<RetryExhaustedCall>()
+        var successAfterRetryCalls = listOf<SuccessAfterRetryCall>()
         val result = runCatching {
             this.retryBackoff(
                 minDelay = minDelay,
@@ -284,6 +320,9 @@ class RetryBackoffFlowTest {
                 transient = transient,
                 jitterFactor = jitterFactor,
                 random = random,
+                successAfterRetry = { attempts ->
+                    successAfterRetryCalls += SuccessAfterRetryCall(attempts, testScope.currentTime)
+                },
                 beforeRetry = { cause, currentAttempts, totalAttempts ->
                     beforeRetryCalls += BeforeRetryCall(cause, currentAttempts, totalAttempts, testScope.currentTime)
                 },
@@ -296,10 +335,12 @@ class RetryBackoffFlowTest {
         assertEquals(expectResult, result)
         assertEquals(expectRetriesExhaustedCalls, retriesExhaustedCalls)
         assertEquals(expectBeforeRetryCalls, beforeRetryCalls)
+        assertEquals(expectSuccessAfterRetry, successAfterRetryCalls)
     }
-    
+
     data class BeforeRetryCall(val cause: Throwable, val currentAttempts: Int, val totalAttempts: Int, val time: Long)
     data class RetryExhaustedCall(val cause: Throwable, val time: Long)
-    
+    data class SuccessAfterRetryCall(val attempts: Int, val time: Long)
+
     data class TestException(override val message: String) : Exception(message)
 }
