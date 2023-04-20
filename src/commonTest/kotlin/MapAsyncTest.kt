@@ -35,19 +35,19 @@ class MapAsyncTest {
         assertEquals(set.map(intTransformation3), set.mapAsync(intTransformation3))
     }
 
-@Test
-fun should_map_async_and_keep_elements_order() = runTest {
-    val transforms = listOf(
-        suspend { delay(3000); "A" },
-        suspend { delay(2000); "B" },
-        suspend { delay(4000); "C" },
-        suspend { delay(1000); "D" },
-    )
+    @Test
+    fun should_map_async_and_keep_elements_order() = runTest {
+        val transforms = listOf(
+            suspend { delay(3000); "A" },
+            suspend { delay(2000); "B" },
+            suspend { delay(4000); "C" },
+            suspend { delay(1000); "D" },
+        )
 
-    val res = transforms.mapAsync { it() }
-    assertEquals(listOf("A", "B", "C", "D"), res)
-    assertEquals(4000, currentTime)
-}
+        val res = transforms.mapAsync { it() }
+        assertEquals(listOf("A", "B", "C", "D"), res)
+        assertEquals(4000, currentTime)
+    }
 
     @Test
     fun should_support_context_propagation() = runTest {

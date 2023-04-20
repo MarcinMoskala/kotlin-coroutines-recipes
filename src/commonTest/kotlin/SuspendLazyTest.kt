@@ -1,9 +1,8 @@
-import kotlinx.coroutines.CoroutineName
-import kotlinx.coroutines.currentCoroutineContext
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.*
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.currentTime
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.withContext
 import recipes.suspendLazy
 import kotlin.coroutines.CoroutineContext
 import kotlin.test.Test
@@ -62,5 +61,18 @@ class SuspendLazyTest {
             lazyValue()
         }
         assertEquals(name1, ctx?.get(CoroutineName))
+    }
+
+    @Test
+    fun should_set_is_initialized() = runTest {
+        val lazyValue = suspendLazy { delay(1000); 123 }
+
+        assertEquals(false, lazyValue.isInitialized)
+        launch { lazyValue() }
+        assertEquals(false, lazyValue.isInitialized)
+        advanceTimeBy(1000)
+        assertEquals(false, lazyValue.isInitialized)
+        runCurrent()
+        assertEquals(true, lazyValue.isInitialized)
     }
 }
