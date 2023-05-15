@@ -19,6 +19,7 @@ fun <T> Flow<T>.retryBackoff(
     successAfterRetry: suspend (attempts: Int) -> Unit = {},
     beforeRetry: suspend (cause: Throwable, currentAttempts: Int, totalAttempts: Int) -> Unit = { _, _, _ -> },
     retriesExhausted: suspend (cause: Throwable) -> Unit = {},
+    retryCondition: suspend (cause: Throwable, currentAttempts: Int, totalAttempts: Int) -> Boolean = { _, _, _, -> true }
 ): Flow<T> {
     require(jitterFactor in 0.0..1.0)
     require(maxAttempts > 0)
@@ -41,6 +42,8 @@ fun <T> Flow<T>.retryBackoff(
                     calculateBackoffDelay(minDelay, maxDelay, currentAttempts, jitterFactor, random, backoffFactor)
                 
                 beforeRetry(cause, currentAttempts, totalAttempts.toInt())
+                val shouldRetry = retryCondition(cause, currentAttempts, totalAttempts.toInt())
+                if (!shouldRetry) return@retryWhen false
                 delay(effectiveDelay.toLong())
                 attemptsInRow++
                 true

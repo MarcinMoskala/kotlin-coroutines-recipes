@@ -4,6 +4,7 @@ package recipes
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.InternalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.internal.SynchronizedObject
@@ -18,10 +19,10 @@ class ConnectionPool<K, V>(
     private val replayExpiration: Duration = Duration.ZERO,
     private val builder: (K) -> Flow<V>,
 ) {
-    private val connections = mutableMapOf<K, Flow<V>>()
+    private val connections = mutableMapOf<K, SharedFlow<V>>()
     private val LOCK = SynchronizedObject()
 
-    fun getConnection(key: K): Flow<V> = synchronized(LOCK) {
+    fun getConnection(key: K): SharedFlow<V> = synchronized(LOCK) {
         connections.getOrPut(key) {
             builder(key).shareIn(
                 scope,
