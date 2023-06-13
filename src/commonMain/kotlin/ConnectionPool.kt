@@ -21,16 +21,13 @@ class ConnectionPool<K, V>(
 ) {
     private val connections = mutableMapOf<K, SharedFlow<V>>()
     private val LOCK = SynchronizedObject()
-
     fun getConnection(key: K): SharedFlow<V> = synchronized(LOCK) {
         connections.getOrPut(key) {
             builder(key).shareIn(
                 scope,
                 started = SharingStarted.WhileSubscribed(
-                    stopTimeoutMillis =
-                    stopTimeout.inWholeMilliseconds,
-                    replayExpirationMillis =
-                    replayExpiration.inWholeMilliseconds,
+                    stopTimeoutMillis = stopTimeout.inWholeMilliseconds,
+                    replayExpirationMillis = replayExpiration.inWholeMilliseconds,
                 ),
                 replay = replay,
             )

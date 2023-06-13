@@ -1,4 +1,5 @@
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.asFlow
@@ -179,6 +180,42 @@ class ConnectionPoolTest {
 
         delay(1)
         assertNull(valueProduced)
+    }
+
+    @Test
+    fun should_keep_lifecycle_order() = runTest {
+        var eventsTrack = listOf<String>()
+        val pool2 = ConnectionPool(backgroundScope) { key: String ->
+            infiniteEverySecondProducerFlow
+                .onStart { eventsTrack += "pool2 inner flow started for $key" }
+                .onCompletion { eventsTrack += "pool2 inner flow completed for $key" }
+        }
+
+        val pool1 = ConnectionPool(backgroundScope) { key: String ->
+            pool2.getConnection("A")
+                .onStart { eventsTrack += "pool1 inner flow started for $key" }
+                .onCompletion { eventsTrack += "pool1 inner flow completed for $key" }
+        }
+
+        val job = pool1.getConnection("A")
+            .onStart { eventsTrack += "outer flow started" }
+            .onCompletion { eventsTrack += "outer flow completed" }
+            .launchIn(backgroundScope)
+
+        delay(1)
+        assertEquals(listOf(
+            "outer flow started",
+            "pool1 inner flow started for A",
+            "pool2 inner flow started for A",
+        ), eventsTrack)
+        eventsTrack = emptyList()
+        job.cancelAndJoin()
+        delay(1)
+        assertEquals(listOf(
+            "outer flow completed",
+            "pool1 inner flow completed for A",
+            "pool2 inner flow completed for A",
+        ), eventsTrack)
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
