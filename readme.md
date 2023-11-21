@@ -132,16 +132,30 @@ suspend fun getUserData(): UserData = userData()
 
 See [implementation](https://github.com/MarcinMoskala/kotlin-coroutines-recipes/blob/master/src/commonMain/kotlin/suspendLazy.kt).
 
-## `ConnectionPool`
+## `SharedDataSource`
 
-Class `ConnectionPool` allows you to reuse the same flow connections created based on a key. It makes sure there is no more than a single active connection for a given key. It is useful when you want to reuse the same flow for multiple subscribers.
+Class `SharedDataSource` allows you to reuse the same flow data sources created based on a key. It makes sure there is no more than a single active shared flow for a given key. It is useful when you want to reuse the same shared flow for multiple subscribers.
 
 ```kotlin
-val connectionPool = ConnectionPool<String, Flow<String>>(scope) { userId ->
+val sharedDataSource = SharedDataSource<String, Flow<String>>(scope) { userId ->
     observeMessages(userId)
 }
 
-fun observeMessages(userId: String): Flow<String> = connectionPool.getConnection(userId)
+fun observeMessages(userId: String): Flow<String> = sharedDataSource.get(userId)
 ```
 
-See [implementation](https://github.com/MarcinMoskala/kotlin-coroutines-recipes/blob/master/src/commonMain/kotlin/ConnectionPool.kt).
+See [implementation](https://github.com/MarcinMoskala/kotlin-coroutines-recipes/blob/master/src/commonMain/kotlin/SharedDataSource.kt).
+
+## `StateDataSource`
+
+Class `StateDataSource` allows you to reuse the same state flow created based on a key. It makes sure there is no more than a single active state flow for a given key. It is useful when you want to reuse the same state flow for multiple subscribers.
+
+```kotlin
+val usersState = StateDataSource<String, Flow<String>>(scope) { userId ->
+    observeUserState(userId)
+}
+
+fun observeUserState(userId: String): Flow<User> = usersState.get(userId)
+```
+
+See [implementation](https://github.com/MarcinMoskala/kotlin-coroutines-recipes/blob/master/src/commonMain/kotlin/StateDataSource.kt).
