@@ -37,11 +37,11 @@ class MapAsyncTest {
 
     @Test
     fun should_map_async_and_keep_elements_order() = runTest {
-        val transforms = listOf(
-            suspend { delay(3000); "A" },
-            suspend { delay(2000); "B" },
-            suspend { delay(4000); "C" },
-            suspend { delay(1000); "D" },
+        val transforms: List<suspend () -> String> = listOf(
+            { delay(3000); "A" },
+            { delay(2000); "B" },
+            { delay(4000); "C" },
+            { delay(1000); "D" },
         )
 
         val res = transforms.mapAsync { it() }
@@ -55,12 +55,12 @@ class MapAsyncTest {
 
         val name1 = CoroutineName("Name 1")
         withContext(name1) {
-            listOf("A").mapAsync {
+            listOf("A").mapAsync { 
                 ctx = currentCoroutineContext()
                 it
             }
-            assertEquals(name1, ctx?.get(CoroutineName))
         }
+        assertEquals(name1, ctx?.get(CoroutineName))
 
         val name2 = CoroutineName("Some name 2")
         withContext(name2) {
@@ -68,8 +68,8 @@ class MapAsyncTest {
                 ctx = currentCoroutineContext()
                 it
             }
-            assertEquals(name2, ctx?.get(CoroutineName))
         }
+        assertEquals(name2, ctx?.get(CoroutineName))
     }
 
     @Test

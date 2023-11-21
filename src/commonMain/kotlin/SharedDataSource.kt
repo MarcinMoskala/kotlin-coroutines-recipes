@@ -1,6 +1,3 @@
-
-package recipes
-
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.InternalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -11,22 +8,22 @@ import kotlinx.coroutines.internal.SynchronizedObject
 import kotlinx.coroutines.internal.synchronized
 import kotlin.time.Duration
 
-@OptIn(InternalCoroutinesApi::class)
-class ConnectionPool<K, V>(
+class SharedDataSource<K, V>(
     private val scope: CoroutineScope,
+    private val replayExpiration: Duration = Duration.INFINITE,
     private val replay: Int = 0,
-    private val stopTimeout: Duration = Duration.ZERO,
-    private val replayExpiration: Duration = Duration.ZERO,
     private val builder: (K) -> Flow<V>,
 ) {
     private val connections = mutableMapOf<K, SharedFlow<V>>()
-    private val LOCK = SynchronizedObject()
-    fun getConnection(key: K): SharedFlow<V> = synchronized(LOCK) {
+    @OptIn(InternalCoroutinesApi::class)
+    private val lock = object : SynchronizedObject() {}
+    
+    @OptIn(InternalCoroutinesApi::class)
+    fun get(key: K): SharedFlow<V> = synchronized(lock) {
         connections.getOrPut(key) {
             builder(key).shareIn(
                 scope,
                 started = SharingStarted.WhileSubscribed(
-                    stopTimeoutMillis = stopTimeout.inWholeMilliseconds,
                     replayExpirationMillis = replayExpiration.inWholeMilliseconds,
                 ),
                 replay = replay,
