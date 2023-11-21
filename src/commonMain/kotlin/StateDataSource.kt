@@ -12,13 +12,14 @@ class StateDataSource<K, V>(
     private val scope: CoroutineScope,
     private val initial: V,
     private val replayExpiration: Duration = Duration.INFINITE,
+    private val stopTimeout: Duration = Duration.ZERO,
     private val builder: (K) -> Flow<V>,
 ) {
     private val connections = mutableMapOf<K, StateFlow<V>>()
 
     @OptIn(InternalCoroutinesApi::class)
     private val lock = object : SynchronizedObject() {}
-    
+
     @OptIn(InternalCoroutinesApi::class)
     fun get(key: K): StateFlow<V> = synchronized(lock) {
         connections.getOrPut(key) {
@@ -27,13 +28,19 @@ class StateDataSource<K, V>(
                 initialValue = initial,
                 started = SharingStarted.WhileSubscribed(
                     replayExpirationMillis = replayExpiration.inWholeMilliseconds,
+                    stopTimeoutMillis = stopTimeout.inWholeMilliseconds,
                 ),
             )
         }
     }
-    
+
     @OptIn(InternalCoroutinesApi::class)
     fun all(): List<StateFlow<V>> = synchronized(lock) {
         connections.values.toList()
+    }
+
+    @OptIn(InternalCoroutinesApi::class)
+    fun clear() = synchronized(lock) {
+        connections.clear()
     }
 }

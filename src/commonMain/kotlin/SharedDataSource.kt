@@ -11,6 +11,7 @@ import kotlin.time.Duration
 class SharedDataSource<K, V>(
     private val scope: CoroutineScope,
     private val replayExpiration: Duration = Duration.INFINITE,
+    private val stopTimeout: Duration = Duration.ZERO,
     private val replay: Int = 0,
     private val builder: (K) -> Flow<V>,
 ) {
@@ -25,9 +26,20 @@ class SharedDataSource<K, V>(
                 scope,
                 started = SharingStarted.WhileSubscribed(
                     replayExpirationMillis = replayExpiration.inWholeMilliseconds,
+                    stopTimeoutMillis = stopTimeout.inWholeMilliseconds,
                 ),
                 replay = replay,
             )
         }
+    }
+    
+    @OptIn(InternalCoroutinesApi::class)
+    fun all(): List<SharedFlow<V>> = synchronized(lock) {
+        connections.values.toList()
+    }
+    
+    @OptIn(InternalCoroutinesApi::class)
+    fun clear() = synchronized(lock) {
+        connections.clear()
     }
 }
