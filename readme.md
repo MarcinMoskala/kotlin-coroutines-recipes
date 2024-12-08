@@ -159,3 +159,17 @@ fun observeUserState(userId: String): Flow<User> = usersState.get(userId)
 ```
 
 See [implementation](https://github.com/MarcinMoskala/kotlin-coroutines-recipes/blob/master/src/commonMain/kotlin/StateDataSource.kt).
+
+## `enqueueWithDelay`
+
+Function `enqueueWithDelay` transforms flow into a queue, where there is a given wait-`period` between two consecutive emits from original flow. Useful for displaying fast-changing info to the user, like progress state.
+
+```kotlin
+val fastProgress = fastProgressFlow()
+    .enqueueWithDelay(period = 1.seconds)
+    .map(::toSomeUiState)
+
+fun fastProgressFlow(): Flow<Int> = flow<Int> { repeat(10) { emit(it) } }
+```
+
+See [implementation](https://github.com/MarcinMoskala/kotlin-coroutines-recipes/blob/master/src/commonMain/kotlin/enqueueWithDelay.kt).
