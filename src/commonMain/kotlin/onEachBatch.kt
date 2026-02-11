@@ -11,24 +11,20 @@ import kotlinx.coroutines.flow.flow
  */
 fun <T> Flow<T>.onEachBatch(
     batchSize: Int,
-    action: (List<T>) -> Unit
+    action: suspend (List<T>) -> Unit
 ): Flow<T> = flow {
     var collected = mutableListOf<T>()
     try {
         collect { value ->
-            collected += value
+            collected.add(value)
             if (collected.size >= batchSize) {
-                val batch = collected
-                collected = mutableListOf()
-                action(batch)
+                action(collected.also { collected = mutableListOf() })
             }
             emit(value)
         }
     } finally {
         if (collected.isNotEmpty()) {
-            val batch = collected
-            collected = mutableListOf()
-            action(batch)
+            action(collected)
         }
     }
 }
