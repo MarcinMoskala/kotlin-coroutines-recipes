@@ -105,6 +105,29 @@ suspend fun fetchUser(): User = retryBackoff(
 
 See [implementation](https://github.com/MarcinMoskala/kotlin-coroutines-recipes/blob/master/src/commonMain/kotlin/RetryBackoff.kt).
 
+### `onEachBatch`
+
+Function `onEachBatch` collects elements from a flow and invokes an action with a list of elements when a batch size is reached. When the flow terminates (normal completion, cancellation, or exception), the action is invoked with any remaining elements. Elements are still emitted downstream immediately as they are received.
+
+```kotlin
+flowOf(1, 2, 3, 4, 5)
+    .onEachBatch(batchSize = 2) { batch ->
+        println("Got batch: $batch")
+    }
+    .collect { println("Collected: $it") }
+// Output:
+// Collected: 1
+// Collected: 2
+// Got batch: [1, 2]
+// Collected: 3
+// Collected: 4
+// Got batch: [3, 4]
+// Collected: 5
+// Got batch: [5]
+```
+
+See [implementation](https://github.com/MarcinMoskala/kotlin-coroutines-recipes/blob/master/src/commonMain/kotlin/onEachBatch.kt).
+
 ### `raceOf`
 
 Function `raceOf` allows you to run multiple suspending functions in parallel and return the result of the first one that finishes. 
