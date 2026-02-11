@@ -15,7 +15,7 @@ fun <T> suspendLazy(
             get() = innerInitializer == null
 
         @Suppress("UNCHECKED_CAST")
-        override suspend fun invoke(): T =
+        override suspend operator fun invoke(): T =
             if (innerInitializer == null) holder as T
             else mutex.withLock {
                 innerInitializer?.let {
@@ -27,6 +27,7 @@ fun <T> suspendLazy(
     }
 }
 
-interface SuspendLazy<T> : suspend () -> T {
+interface SuspendLazy<T> {
     val isInitialized: Boolean
+    suspend operator fun invoke(): T
 }

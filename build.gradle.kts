@@ -2,7 +2,7 @@ import org.jetbrains.kotlin.gradle.targets.js.testing.KotlinJsTest
 import org.jetbrains.kotlin.gradle.targets.js.webpack.KotlinWebpackConfig
 
 plugins {
-    kotlin("multiplatform") version "1.8.20-RC"
+    kotlin("multiplatform") version "2.1.0"
     `maven-publish`
 }
 
@@ -14,8 +14,8 @@ repositories {
 }
 
 kotlin {
+    jvmToolchain(8)
     jvm {
-        jvmToolchain(8)
         withJava()
         testRuns["test"].executionTask.configure {
             useJUnitPlatform()
@@ -25,9 +25,7 @@ kotlin {
         browser {
             testTask(Action {
                 useKarma {
-                    useFirefox()
                     useChrome()
-                    useSafari()
                 }
             })
         }
@@ -44,12 +42,12 @@ kotlin {
     sourceSets {
         val commonMain by getting {
             dependencies {
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4")
+                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2")
             }
         }
         val commonTest by getting {
             dependencies {
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.6.4")
+                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2")
                 implementation(kotlin("test"))
             }
         }
